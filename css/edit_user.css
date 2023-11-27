@@ -1,0 +1,14 @@
+body {
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    width: 10%;
+}
+
+input[type=text], input[type=date], input[type=file] {
+    margin-bottom: 10%;
+}
