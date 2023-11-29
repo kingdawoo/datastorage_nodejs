@@ -1,6 +1,9 @@
 body {
     font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: rgb(227, 248, 255);
 }
 
 form {

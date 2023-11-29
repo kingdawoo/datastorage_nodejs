@@ -49,15 +49,17 @@ app.listen(3000, () => {
   console.log('Server is listening on http://localhost:3000');
 });
 
-// Ifall filen existerar: läs json filen och parse
 let userData = { users: [] }; // destructuring: extrahera värdet från objekt/array till variable
 
+// Ifall filen existerar: läs json filen och parse
 if (fs.existsSync(filePathToJSON)) {
   const data = fs.readFileSync(filePathToJSON);
   userData = JSON.parse(data);
 }
 
-// Processa form data från post (fil, text)
+// V Processa form data från post V
+
+// SKAPA KOTNO
 app.post('/create_user', upload.single('image'), (req, res) => {
   console.log(req.body);
   console.log(req.file);
@@ -96,12 +98,14 @@ app.post('/create_user', upload.single('image'), (req, res) => {
   });
 })
 
+// SÖKA KONTO
 app.post('/search_user', (req, res) => {
   console.log("Searched username: " + req.body.username);
 
   const userSearched = req.body.username;
   let userFound = false;
-
+  
+  // Loop igenom för att hitta användare
   userData.users.forEach(user => {
     if (userSearched === user.userName) {
       userFound = true;
@@ -111,7 +115,7 @@ app.post('/search_user', (req, res) => {
         icon: path.join(__dirname, '/img/check.jpg')
       });
 
-      /// Jämför sökt användarnamn med existerande och tilldela dess värden till user variabel
+      // Jämför sökt användarnamn med existerande och tilldela dess värden till user variabel
       const user = userData.users.find(u => u.userName === userSearched);
       const userValues = Object.values(user);
       console.log('Values of user:', userValues);
@@ -119,7 +123,7 @@ app.post('/search_user', (req, res) => {
       // Lägg till redigeringsformulär + användardata
       res.send(` 
         <link rel="stylesheet" href="../css/edit_user.css">
-        <form action="/edit_user" method="post">
+        <form action="/edit_user" method="POST" enctype="multipart/form-data">
           <label for="first-name">Förnamn: </label>
           <input type="text" name="first-name" id="first-name">
 
@@ -139,12 +143,14 @@ app.post('/search_user', (req, res) => {
           <input type="text" name="profession" id="profession">
 
           <input type="submit" name="edit" value="Redigera">
+
+          <input type="hidden" name="edit-username" value="${userSearched}">
         </form>
 
         <div id="user-info">
-          <p id="u-name">${userValues[3]}</p>
           <p id="f-name">${userValues[1]}</p>
           <p id="l-name">${userValues[2]}</p>
+          <p id="u-name">${userValues[3]}</p>
           <p id="b-date">${userValues[4]}</p>
           <img src="../uploads/${userValues[5]}" alt="Portrait" id="photo" width=250 height=250>
           <p id="pro">${userValues[6]}</p>
@@ -155,13 +161,72 @@ app.post('/search_user', (req, res) => {
 
   if (!userFound) {
     notifier.notify({
-      title: 'NEJ!',
+      title: 'Fel!',
       message: 'Inget konto med det användarnamn existerar',
       icon: path.join(__dirname, '/img/cross.png')
     });
   }
 });
 
-app.post('/create_user', upload.single('image'), (req, res) => { 
+// REDIGERA KONTO
+app.post('/edit_user', upload.single('image'), (req, res) => {
+  const editUsername = req.body['edit-username']; // Ta den användaren som blev sökt för ifrån hidden type
 
-})
+  // Hitta användaren genom jämföring (istället för loop kan man använda 'find')
+  const userToEdit = userData.users.find(user => user.userName === editUsername);
+
+  if (userToEdit) {
+    // Uppdatera användardatan med de nya form datan
+    userToEdit.firstName = req.body['first-name'];
+    userToEdit.lastName = req.body['last-name'];
+    userToEdit.userName = req.body['user-name'];
+    userToEdit.birthDate = req.body['birth-date'];
+    userToEdit.image = req.file ? req.file.filename : "",
+    userToEdit.profession = req.body['profession'];
+
+    // Skriv om de redigerade användardatan till JSON filen
+    fs.writeFile(filePathToJSON, JSON.stringify(userData, null, 2), (err) => {
+      if (err) {
+        res.status(500).send('<p>Error saving data</p>');
+      } else {
+        notifier.notify({
+          title: 'Konto uppdaterat!',
+          message: 'Användarens information har uppdaterats',
+          icon: path.join(__dirname, '/img/check.jpg')
+        });
+        res.redirect('/index.html');
+      }
+    });
+  }
+});
+
+// SE KONTO
+app.post('/view_user', (req, res) => { // Va osäker ifall all funktionalitet skulle vara i nodejs, det här fungerar dock lika bra
+  console.log(userData.users);
+
+  let userHTML = '<!DOCTYPE html>';
+  userHTML += '<html lang="en">';
+  userHTML += '<head>';
+  userHTML += '<meta charset="UTF-8">';
+  userHTML += '<title>View Users</title>';
+  userHTML += '<link rel="stylesheet" href="../css/view_user.css">'
+  userHTML += '</head>';
+  userHTML += '<body>';
+  userHTML += '<div id="user-list">';
+
+  userData.users.forEach(user => { // Loopa igenom all info från alla användare och lägg i element sedan variabel
+    userHTML += '<div class="user">';
+    userHTML += `<h2>${user.userName}</h2>`;
+    userHTML += `<p>${user.firstName} ${user.lastName}</p>`;
+    userHTML += `<p>${user.birthDate}</p>`;
+    userHTML += `<img src="/uploads/${user.image}" alt="Portrait" width="100" height="100">`;
+    userHTML += `<p>${user.profession}</p>`;
+    userHTML += '</div>';
+  });
+
+  userHTML += '</div>';
+  userHTML += '</body>';
+  userHTML += '</html>';
+
+  res.send(userHTML); // Skicka tillbaka till client för att se
+});
